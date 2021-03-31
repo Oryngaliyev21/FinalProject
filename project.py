@@ -17,10 +17,11 @@ Covid_test1 = pd.read_html(str(table), displayed_only=False)[0]
 #Make a pure worksheet without any bugs
 Covid = Covid_test1.drop(Covid_test1.index[[6, 229, 230, 231, 232, 233, 234, 235, 236]])
 Covid['Continent'] = Covid['Continent'].replace([None], 'Cruise ship')
+Covid = Covid.drop('#', 1)
 
 #Creating Sidebars
 st.sidebar.header('User Input Features')
-Selected_Countries = st.sidebar.selectbox('Country', list(Covid['Country,Other']))
-Selected_Continent = st.sidebar.selectbox('Continent', list(set(Covid['Continent'])))
+Selected_Countries = st.sidebar.selectbox('Country', list(sorted(Covid['Country,Other'])))
+Selected_Continent = st.sidebar.selectbox('Continent', list(sorted(set(Covid['Continent']))))
 
 
