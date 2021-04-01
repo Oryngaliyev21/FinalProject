@@ -37,7 +37,13 @@ Selected_Continent = st.sidebar.multiselect('Continent', list(sorted(set(Covid_C
 Selected_Countries = st.sidebar.multiselect('Country', list(sorted(Covid_Countries['Country,Other'][8:])))
 Selected_Attributes = st.sidebar.multiselect('Attribute', list(Covid_Countries.columns[1:]))
 
-#For test
-st.dataframe(Covid_Continents)
+#For test tables and graphs
+data_continents = pd.DataFrame(Covid_Continents, columns=['Country,Other','TotalCases','NewCases','TotalDeaths','NewDeaths','TotalRecovered','NewRecovered','ActiveCases'])
+st.table(data_continents)
 st.dataframe(Covid_Countries)
+
+df1 = pd.DataFrame(Covid_Continents, columns=['TotalCases','NewCases','TotalDeaths','NewDeaths','TotalRecovered','NewRecovered','ActiveCases'])
+df2 = pd.DataFrame(Covid_Countries)
+st.bar_chart(df1)
+st.line_chart(df2)
 
