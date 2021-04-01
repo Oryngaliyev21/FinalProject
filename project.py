@@ -2,9 +2,17 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import streamlit as st
+from datetime import *
+
+#Block for current time and date
+time = datetime.now()
+day = date.today()
+current_time = time.strftime("%H:%M:%S")
+current_day = day.strftime("%B %d, %Y")
 
 #Application title and basic info
 st.title('COVID-19 pandemic tracker')
+st.write('Date when information updated:', current_time, '-', current_day, '(GMT+6)')
 
 #Parser block
 url = 'https://www.worldometers.info/coronavirus/'
@@ -21,14 +29,12 @@ Covid = Covid.drop('#', 1)
 #Separate DataFrame for Continents
 Covid_Continents_test = Covid.drop(Covid.index[7:])
 Covid_Continents = Covid_Continents_test.sort_values(by=['TotalCases'], ascending=False)
-Covid_Continents = Covid_Continents.reset_index()
-Covid_Continents = Covid_Continents.drop('index', 1)
+Covid_Continents = Covid_Continents.reset_index(drop=True)
 Covid_Continents = Covid_Continents.fillna('-')
 
 #Separate DataFrame for Countries
 Covid_Countries_test = Covid.drop(Covid.index[0:7])
-Covid_Countries = Covid_Countries_test.reset_index()
-Covid_Countries = Covid_Countries.drop('index', 1)
+Covid_Countries = Covid_Countries_test.reset_index(drop=True)
 Covid_Countries = Covid_Countries.fillna(0)
 
 #Creating Sidebars for User Input to sort Country dataframe
@@ -46,4 +52,5 @@ df1 = pd.DataFrame(Covid_Continents, columns=['TotalCases','NewCases','TotalDeat
 df2 = pd.DataFrame(Covid_Countries)
 st.bar_chart(df1)
 st.line_chart(df2)
+
 
