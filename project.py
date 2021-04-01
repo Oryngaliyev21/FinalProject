@@ -3,6 +3,9 @@ import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 from datetime import *
+from geopy.exc import GeocoderTimedOut
+from geopy.geocoders import Nominatim
+import numpy as np
 
 #Block for current time and date
 time = datetime.now()
@@ -50,7 +53,28 @@ st.dataframe(Covid_Countries)
 
 df1 = pd.DataFrame(Covid_Continents, columns=['TotalCases','NewCases','TotalDeaths','NewDeaths','TotalRecovered','NewRecovered','ActiveCases'])
 df2 = pd.DataFrame(Covid_Countries)
-st.bar_chart(df1)
-st.line_chart(df2)
+#st.bar_chart(df1)
+#st.line_chart(df2)
 
+#Part to find coordinates for each country
+longitude = []
+latitude = []
 
+def findGeocode(country):
+    try:
+        geolocator = Nominatim(user_agent="your_app_name")
+        return geolocator.geocode(country)
+    except GeocoderTimedOut:
+        return findGeocode(country)
+
+for i in (df2["Country,Other"]):
+    if findGeocode(i)!=None:
+        loc = findGeocode(i)
+        latitude.append(loc.latitude)
+        longitude.append(loc.longitude)
+    else:
+        latitude.append(np.nan)
+        longitude.append(np.nan)
+df2["longitude"] = longitude
+df2["latitude"] = latitude
+st.map(df2[["latitude","longitude"]])
