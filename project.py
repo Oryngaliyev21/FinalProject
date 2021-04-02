@@ -6,6 +6,7 @@ from datetime import *
 from geopy.exc import GeocoderTimedOut
 from geopy.geocoders import Nominatim
 import numpy as np
+import pydeck as pdk
 
 #Block for current time and date
 time = datetime.now()
@@ -77,4 +78,41 @@ for i in (df2["Country,Other"]):
         longitude.append(np.nan)
 df2["longitude"] = longitude
 df2["latitude"] = latitude
-st.map(df2[["latitude","longitude"]])
+
+#SELECTBOX widgets
+metrics = ['TotalCases','TotalDeaths','TotalRecovered','ActiveCases','TotalTests']
+cols = st.selectbox('Covid metric to view', metrics)
+
+# let's ask the user which column should be used as Index
+if cols in metrics:
+    metric_to_show_in_covid_Layer = cols
+# Set viewport for the deckgl map
+view = pdk.ViewState(latitude=0, longitude=0, zoom=0.2, )
+
+# Create the scatter plot layer
+covidLayer = pdk.Layer(
+    "ScatterplotLayer",
+    data=df2,
+    pickable=False,
+    opacity=0.3,
+    stroked=True,
+    filled=True,
+    radius_scale=10,
+    radius_min_pixels=5,
+    radius_max_pixels=60,
+    line_width_min_pixels=1,
+    get_position=["longitude", "latitude"],
+    get_radius=metric_to_show_in_covid_Layer,
+    get_fill_color=[252, 136, 3],
+    get_line_color=[255, 0, 0],
+    tooltip="test test")
+
+# Create the deck.gl map
+r = pdk.Deck(
+    layers=[covidLayer],
+    initial_view_state=view,
+    map_style="mapbox://styles/mapbox/light-v10")
+
+subheading = st.subheader("Covid-19 distribution map")
+# Run pydech_chart in streamlit_app
+map = st.pydeck_chart(r)
