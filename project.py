@@ -3,9 +3,6 @@ import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 from datetime import *
-from geopy.exc import GeocoderTimedOut
-from geopy.geocoders import Nominatim
-import numpy as np
 import pydeck as pdk
 
 #Block for current time and date
@@ -16,6 +13,9 @@ current_day = day.strftime("%B %d, %Y")
 
 #Application title and basic info
 st.title('COVID-19 pandemic tracker')
+st.write('Data sources:')
+st.write('Scrapping webpage:', 'https://www.worldometers.info/coronavirus/')
+st.write('For geolocation:', 'https://www.kaggle.com/paultimothymooney/latitude-and-longitude-for-every-country-and-state?select=world_country_and_usa_states_latitude_and_longitude_values.csv')
 st.write('Date when information updated:', current_time, '-', current_day, '(GMT+6)')
 
 #Parser block
@@ -42,45 +42,43 @@ Covid_Countries = Covid_Countries_test.reset_index(drop=True)
 Covid_Countries = Covid_Countries.fillna(0)
 
 #Creating Sidebars for User Input to sort Country dataframe
-st.sidebar.header('User Input Features')
+st.sidebar.header('User Input Features for Countries')
 Selected_Continent = st.sidebar.multiselect('Continent', list(sorted(set(Covid_Countries['Continent']))))
 Selected_Countries = st.sidebar.multiselect('Country', list(sorted(Covid_Countries['Country,Other'][8:])))
 Selected_Attributes = st.sidebar.multiselect('Attribute', list(Covid_Countries.columns[1:]))
 
 #For test tables and graphs
-data_continents = pd.DataFrame(Covid_Continents, columns=['Country,Other','TotalCases','NewCases','TotalDeaths','NewDeaths','TotalRecovered','NewRecovered','ActiveCases'])
+data_continents = pd.DataFrame(Covid_Continents, columns=['Country,Other', 'TotalCases', 'NewCases', 'TotalDeaths', 'NewDeaths', 'TotalRecovered', 'NewRecovered', 'ActiveCases'])
 st.table(data_continents)
 st.dataframe(Covid_Countries)
 
-df1 = pd.DataFrame(Covid_Continents, columns=['TotalCases','NewCases','TotalDeaths','NewDeaths','TotalRecovered','NewRecovered','ActiveCases'])
-df2 = pd.DataFrame(Covid_Countries)
-#st.bar_chart(df1)
-#st.line_chart(df2)
+#For taking geolocation(latitude, longitude) for each country
+Lat = []
+Lon = []
+Cou = []
 
-#Part to find coordinates for each country
-longitude = []
+data = pd.read_csv('Coordinates.csv') #Used data from kaggle(link above)
+df = pd.DataFrame(data)
+Lat = list(df['latitude'])
+Lon = list(df['longitude'])
+Cou = list(df['country'])
+
 latitude = []
+longitude = []
 
-def findGeocode(country):
-    try:
-        geolocator = Nominatim(user_agent="your_app_name")
-        return geolocator.geocode(country)
-    except GeocoderTimedOut:
-        return findGeocode(country)
+for i in (Covid_Countries['Country,Other']):
+    for k, index in enumerate(Cou):
+        if i == index:
+            latitude.append(Lat[k])
+            longitude.append(Lon[k])
+        else:
+            continue
 
-for i in (df2["Country,Other"]):
-    if findGeocode(i)!=None:
-        loc = findGeocode(i)
-        latitude.append(loc.latitude)
-        longitude.append(loc.longitude)
-    else:
-        latitude.append(np.nan)
-        longitude.append(np.nan)
-df2["longitude"] = longitude
-df2["latitude"] = latitude
+Covid_Countries['latitude'] = latitude
+Covid_Countries['longitude'] = longitude
 
 #SELECTBOX widgets
-metrics = ['TotalCases','TotalDeaths','TotalRecovered','ActiveCases','TotalTests']
+metrics = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
 cols = st.selectbox('Covid metric to view', metrics)
 
 # let's ask the user which column should be used as Index
@@ -92,7 +90,7 @@ view = pdk.ViewState(latitude=0, longitude=0, zoom=0.2, )
 # Create the scatter plot layer
 covidLayer = pdk.Layer(
     "ScatterplotLayer",
-    data=df2,
+    data=Covid_Countries,
     pickable=False,
     opacity=0.3,
     stroked=True,
@@ -114,5 +112,8 @@ r = pdk.Deck(
     map_style="mapbox://styles/mapbox/light-v10")
 
 subheading = st.subheader("Covid-19 distribution map")
-# Run pydech_chart in streamlit_app
+# Run pydeck_chart in streamlit app
 map = st.pydeck_chart(r)
+
+
+
