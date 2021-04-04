@@ -15,7 +15,7 @@ current_day = day.strftime("%B %d, %Y")
 st.title('COVID-19 pandemic tracker')
 st.write('Data sources:')
 st.write('Scrapping webpage:', 'https://www.worldometers.info/coronavirus/')
-st.write('For geolocation:', 'https://www.kaggle.com/paultimothymooney/latitude-and-longitude-for-every-country-and-state?select=world_country_and_usa_states_latitude_and_longitude_values.csv')
+st.write('For geolocation:', 'https://clck.ru/U5wL4')
 st.write('Date when information updated:', current_time, '-', current_day, '(GMT+6)')
 
 #Parser block
@@ -29,36 +29,29 @@ Covid_test = pd.read_html(str(table), displayed_only=False)[0]
 Covid = Covid_test.drop(Covid_test.index[[6, 229, 230, 231, 232, 233, 234, 235, 236]])
 Covid['Continent'] = Covid['Continent'].replace([None], 'Cruise ship')
 Covid = Covid.drop('#', 1)
+Covid = Covid.rename(columns={'Country,Other': 'Country'})
 
 #Separate DataFrame for Continents
 Covid_Continents_test = Covid.drop(Covid.index[7:])
 Covid_Continents = Covid_Continents_test.sort_values(by=['TotalCases'], ascending=False)
 Covid_Continents = Covid_Continents.reset_index(drop=True)
 Covid_Continents = Covid_Continents.fillna('-')
+Covid_Continents = Covid_Continents.rename(columns={'Country': 'Continents'})
 
 #Separate DataFrame for Countries
 Covid_Countries_test = Covid.drop(Covid.index[0:7])
 Covid_Countries = Covid_Countries_test.reset_index(drop=True)
 Covid_Countries = Covid_Countries.fillna(0)
 
-#Creating Sidebars for User Input to sort Country dataframe
-st.sidebar.header('User Input Features for Countries')
-Selected_Continent = st.sidebar.multiselect('Continent', list(sorted(set(Covid_Countries['Continent']))))
-Selected_Countries = st.sidebar.multiselect('Country', list(sorted(Covid_Countries['Country,Other'][8:])))
-Selected_Attributes = st.sidebar.multiselect('Attribute', list(Covid_Countries.columns[1:]))
-
-#For test tables and graphs
-data_continents = pd.DataFrame(Covid_Continents, columns=['Country,Other', 'TotalCases', 'NewCases', 'TotalDeaths', 'NewDeaths', 'TotalRecovered', 'NewRecovered', 'ActiveCases'])
+#For displaying table of World and all continents(except Antarctica) data
+st.write("""## Table of World and all continents(except Antarctica) data""")
+data_continents = pd.DataFrame(Covid_Continents, columns=['Continents', 'TotalCases', 'NewCases', 'TotalDeaths', 'NewDeaths', 'TotalRecovered', 'NewRecovered', 'ActiveCases'])
 st.table(data_continents)
-st.dataframe(Covid_Countries)
 
 #For taking geolocation(latitude, longitude) for each country
-Lat = []
-Lon = []
-Cou = []
+Coordinates = pd.read_csv('Coordinates.csv') #Used data from kaggle(link above)
+df = pd.DataFrame(Coordinates)
 
-data = pd.read_csv('Coordinates.csv') #Used data from kaggle(link above)
-df = pd.DataFrame(data)
 Lat = list(df['latitude'])
 Lon = list(df['longitude'])
 Cou = list(df['country'])
@@ -66,7 +59,7 @@ Cou = list(df['country'])
 latitude = []
 longitude = []
 
-for i in (Covid_Countries['Country,Other']):
+for i in (Covid_Countries['Country']):
     for k, index in enumerate(Cou):
         if i == index:
             latitude.append(Lat[k])
@@ -77,7 +70,44 @@ for i in (Covid_Countries['Country,Other']):
 Covid_Countries['latitude'] = latitude
 Covid_Countries['longitude'] = longitude
 
-#SELECTBOX widgets
+#Filtering data by Continents
+
+default_Attributes = ['TotalCases', 'NewCases', 'TotalDeaths', 'NewDeaths', 'TotalRecovered', 'NewRecovered', 'ActiveCases']
+list_of_columns = list(Covid_Countries.columns)
+
+st.write("""## For filtering data by Continents""")
+For_Continent = []
+for i in list_of_columns:
+    if i != 'Continent' and i != 'Country':
+        For_Continent.append(i)
+Selected_Continent = st.multiselect('Continent and Other', list(sorted(set(Covid_Countries['Continent']))))
+Selected_Attributes_for_Continent = st.multiselect('Attribute', For_Continent, default_Attributes)
+
+Attributes_for_Continent = ['Continent', 'Country']
+
+for i in Selected_Attributes_for_Continent:
+    Attributes_for_Continent.append(i)
+
+Covid_Countries_filter_test1 = Covid_Countries[Attributes_for_Continent]
+Covid_Countries_filter1 = Covid_Countries_filter_test1[Covid_Countries_filter_test1.Continent.isin(Selected_Continent)]
+st.dataframe(Covid_Countries_filter1)
+
+#Filtering data by Countries
+st.write("""## For filtering data by Countries""")
+
+Selected_Countries = st.multiselect('Country', list(sorted(Covid_Countries['Country'])))
+Selected_Attributes_for_Countries = st.multiselect('Attribute', list_of_columns[1:], default_Attributes)
+
+Attributes_for_Countries = ['Country']
+
+for i in Selected_Attributes_for_Countries:
+    Attributes_for_Countries.append(i)
+
+Covid_Countries_filter_test = Covid_Countries[Attributes_for_Countries]
+Covid_Countries_filter = Covid_Countries_filter_test[Covid_Countries_filter_test.Country.isin(Selected_Countries)]
+st.dataframe(Covid_Countries_filter)
+
+#SELECTBOX widgets MAP
 metrics = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
 cols = st.selectbox('Covid metric to view', metrics)
 
@@ -112,8 +142,8 @@ r = pdk.Deck(
     map_style="mapbox://styles/mapbox/light-v10")
 
 subheading = st.subheader("Covid-19 distribution map")
-# Run pydeck_chart in streamlit app
-map = st.pydeck_chart(r)
 
+#Run pydeck_chart in Streamlit app
+map = st.pydeck_chart(r)
 
 
