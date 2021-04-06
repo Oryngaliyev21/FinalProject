@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import streamlit as st
 from datetime import *
 import pydeck as pdk
+import json
 
 #Block for current time and date
 time = datetime.now()
@@ -30,6 +31,8 @@ Covid = Covid_test.drop(Covid_test.index[[6, 229, 230, 231, 232, 233, 234, 235, 
 Covid['Continent'] = Covid['Continent'].replace([None], 'Cruise ship')
 Covid = Covid.drop('#', 1)
 Covid = Covid.rename(columns={'Country,Other': 'Country'})
+Covid['Country'] = Covid['Country'].replace(['Réunion'], ['Reunion'])
+Covid['Country'] = Covid['Country'].replace(['Curaçao'], ['Curacao'])
 
 #Separate DataFrame for Continents
 Covid_Continents_test = Covid.drop(Covid.index[7:])
@@ -70,42 +73,60 @@ for i in (Covid_Countries['Country']):
 Covid_Countries['latitude'] = latitude
 Covid_Countries['longitude'] = longitude
 
-#Filtering data by Continents
-
+#Checkboxe for user input features
 default_Attributes = ['TotalCases', 'NewCases', 'TotalDeaths', 'NewDeaths', 'TotalRecovered', 'NewRecovered', 'ActiveCases']
 list_of_columns = list(Covid_Countries.columns)
+st.write("""## For filtering data""")
 
-st.write("""## For filtering data by Continents""")
-For_Continent = []
-for i in list_of_columns:
-    if i != 'Continent' and i != 'Country':
-        For_Continent.append(i)
-Selected_Continent = st.multiselect('Continent and Other', list(sorted(set(Covid_Countries['Continent']))))
-Selected_Attributes_for_Continent = st.multiselect('Attribute', For_Continent, default_Attributes)
+if st.checkbox('by Continents'):
+    For_Continent = []
+    for i in list_of_columns:
+        if i != 'Continent' and i != 'Country':
+            For_Continent.append(i)
 
-Attributes_for_Continent = ['Continent', 'Country']
+    Selected_Continent = st.multiselect('Continent and Other', list(sorted(set(Covid_Countries['Continent']))))
+    Selected_Attributes_for_Continent = st.multiselect('Attribute', For_Continent, default_Attributes)
 
-for i in Selected_Attributes_for_Continent:
-    Attributes_for_Continent.append(i)
+    Attributes_for_Continent = ['Continent', 'Country']
+    for i in Selected_Attributes_for_Continent:
+        Attributes_for_Continent.append(i)
 
-Covid_Countries_filter_test1 = Covid_Countries[Attributes_for_Continent]
-Covid_Countries_filter1 = Covid_Countries_filter_test1[Covid_Countries_filter_test1.Continent.isin(Selected_Continent)]
-st.dataframe(Covid_Countries_filter1)
+    Covid_Countries_filter_test0 = Covid_Countries[Attributes_for_Continent]
+    Covid_Countries_filter0 = Covid_Countries_filter_test0[Covid_Countries_filter_test0.Continent.isin(Selected_Continent)]
 
-#Filtering data by Countries
-st.write("""## For filtering data by Countries""")
+    st.dataframe(Covid_Countries_filter0)
 
-Selected_Countries = st.multiselect('Country', list(sorted(Covid_Countries['Country'])))
-Selected_Attributes_for_Countries = st.multiselect('Attribute', list_of_columns[1:], default_Attributes)
+if st.checkbox('by Countries'):
+    Selected_Countries = st.multiselect('Country', list(sorted(Covid_Countries['Country'])))
+    Selected_Attributes_for_Countries = st.multiselect('Attribute', list_of_columns[1:], default_Attributes)
 
-Attributes_for_Countries = ['Country']
+    Attributes_for_Countries = ['Country']
 
-for i in Selected_Attributes_for_Countries:
-    Attributes_for_Countries.append(i)
+    for i in Selected_Attributes_for_Countries:
+        Attributes_for_Countries.append(i)
 
-Covid_Countries_filter_test = Covid_Countries[Attributes_for_Countries]
-Covid_Countries_filter = Covid_Countries_filter_test[Covid_Countries_filter_test.Country.isin(Selected_Countries)]
-st.dataframe(Covid_Countries_filter)
+    Covid_Countries_filter_test1 = Covid_Countries[Attributes_for_Countries]
+    Covid_Countries_filter1 = Covid_Countries_filter_test1[Covid_Countries_filter_test1.Country.isin(Selected_Countries)]
+    st.dataframe(Covid_Countries_filter1)
+
+#Update json file for Advanced WorldMap with our Covid data(TotalCases, TotalDeaths and etc.)
+with open('World Map Geo JSON data.json') as f:
+    Covid_Json_test = json.load(f)
+
+TC = list(Covid_Countries['TotalCases'])
+TD = list(Covid_Countries['TotalDeaths'])
+AC = list(Covid_Countries['ActiveCases'])
+PP = list(Covid_Countries['Population'])
+
+for i in Covid_Json_test['features']:
+    info = i['properties']
+    for k, index in enumerate(list(Covid_Countries['Country'])):
+        if info.get('name') == index:
+            info['TotalCases'] = TC[k]
+            info['TotalDeaths'] = TD[k]
+            info['ActiveCases'] = AC[k]
+            info['Population'] = PP[k]
+Covid_Json = json.dumps(Covid_Json_test)
 
 #SELECTBOX widgets MAP
 metrics = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
@@ -145,5 +166,4 @@ subheading = st.subheader("Covid-19 distribution map")
 
 #Run pydeck_chart in Streamlit app
 map = st.pydeck_chart(r)
-
 
