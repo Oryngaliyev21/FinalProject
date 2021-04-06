@@ -3,8 +3,11 @@ import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 from datetime import *
-import pydeck as pdk
 import json
+from streamlit_folium import folium_static
+import folium
+from folium.plugins import MarkerCluster
+from folium.features import GeoJson, GeoJsonTooltip, GeoJsonPopup
 
 #Block for current time and date
 time = datetime.now()
@@ -128,42 +131,80 @@ for i in Covid_Json_test['features']:
             info['Population'] = PP[k]
 Covid_Json = json.dumps(Covid_Json_test)
 
-#SELECTBOX widgets MAP
+#SELECTBOX widgets for maps
 metrics = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
 cols = st.selectbox('Covid metric to view', metrics)
 
 # let's ask the user which column should be used as Index
 if cols in metrics:
     metric_to_show_in_covid_Layer = cols
-# Set viewport for the deckgl map
-view = pdk.ViewState(latitude=0, longitude=0, zoom=0.2, )
 
-# Create the scatter plot layer
-covidLayer = pdk.Layer(
-    "ScatterplotLayer",
-    data=Covid_Countries,
-    pickable=False,
-    opacity=0.3,
-    stroked=True,
-    filled=True,
-    radius_scale=10,
-    radius_min_pixels=5,
-    radius_max_pixels=60,
-    line_width_min_pixels=1,
-    get_position=["longitude", "latitude"],
-    get_radius=metric_to_show_in_covid_Layer,
-    get_fill_color=[252, 136, 3],
-    get_line_color=[255, 0, 0],
-    tooltip="test test")
+# Create the plot layer
+subheading = st.subheader("Covid-19 distribution Marker Map")
 
-# Create the deck.gl map
-r = pdk.Deck(
-    layers=[covidLayer],
-    initial_view_state=view,
-    map_style="mapbox://styles/mapbox/light-v10")
+#Load Data for MAPS
+Country = Covid_Countries['Country']
+lat = Covid_Countries['latitude']
+lon = Covid_Countries['longitude']
+elevation = Covid_Countries[metric_to_show_in_covid_Layer]
 
-subheading = st.subheader("Covid-19 distribution map")
+def color_change(elev):
+    if(elev < 1000):
+        return('green')
+    elif(1000 <= elev <10000):
+        return('orange')
+    else:
+        return('red')
 
-#Run pydeck_chart in Streamlit app
-map = st.pydeck_chart(r)
+map_marker = folium.Map(location=[0,0], zoom_start = 2)
 
+marker_cluster = MarkerCluster().add_to(map_marker)
+
+for lat, lon, elevation, Country in zip(lat, lon, elevation, Country):
+    folium.Marker(location=[lat, lon], popup=[Country,elevation], icon=folium.Icon(color = color_change(elevation))).add_to(map_marker)
+folium_static(map_marker)
+
+# Create the plot layer
+subheading = st.subheader("Covid-19 distribution Heatmap")
+
+#Create base map for Heatmap
+map_heat = folium.Map(location=[0,0], zoom_start = 2)
+max_totalcases = max(list(Covid_Countries["TotalCases"]))
+min_totalcases = min(list(Covid_Countries["TotalCases"]))
+
+#Method to create Choropleth map
+popup = GeoJsonPopup(
+    fields=['name', 'TotalCases', 'TotalDeaths', 'ActiveCases', 'Population'],
+    aliases=['Country:', 'Total Cases:', 'TotalDeaths', 'ActiveCases', 'Population'],
+    localize=True,
+    labels=True,
+    style="background-color: yellow;")
+tooltip = GeoJsonTooltip(
+    fields=['name', 'TotalCases', 'TotalDeaths', 'ActiveCases', 'Population'],
+    aliases=['Country:', 'Total Cases:', 'TotalDeaths', 'ActiveCases', 'Population'],
+    localize=True,
+    sticky=False,
+    labels=True,
+    max_width=800)
+heatmap = folium.Choropleth(
+    geo_data=Covid_Json, data=Covid_Countries,
+    name='Covid-19',
+    columns=['Country', 'TotalCases'],
+    key_on='properties.name',
+    bins=[min_totalcases, 10000, 50000, 100000, 300000, 500000, 1000000, 5000000, 15000000, max_totalcases+1],
+    fill_color='YlOrRd',
+    fill_opacity=0.9, line_opacity=0.6,
+    legend_name='Total Cases',
+    highlight=True).add_to(map_heat)
+folium.GeoJson(
+    Covid_Json,
+    style_function=lambda feature: {
+        'fillColor': '#ffff00',
+        'color': 'black',
+        'weight': 0.2,
+        'dashArray': '5, 5'
+    },
+    tooltip=tooltip,
+    popup=popup).add_to(heatmap)
+
+folium_static(map_heat)
