@@ -1,11 +1,12 @@
-import pandas as pd
 import requests
-from bs4 import BeautifulSoup
-import streamlit as st
-from datetime import *
 import json
-from streamlit_folium import folium_static
 import folium
+import pandas as pd
+import numpy as np
+import streamlit as st
+from bs4 import BeautifulSoup
+from datetime import *
+from streamlit_folium import folium_static
 from folium.plugins import MarkerCluster
 from folium.features import GeoJson, GeoJsonTooltip, GeoJsonPopup
 
@@ -19,7 +20,7 @@ current_day = day.strftime("%B %d, %Y")
 st.title('COVID-19 pandemic tracker')
 st.write('Data sources:')
 st.write('Scrapping webpage:', 'https://www.worldometers.info/coronavirus/')
-st.write('For geolocation:', 'https://clck.ru/U5wL4')
+st.write('For geolocations data check our GitHub repository:', 'Soon...')
 st.write('Date when information updated:', current_time, '-', current_day, '(GMT+6)')
 
 #Parser block
@@ -55,7 +56,7 @@ data_continents = pd.DataFrame(Covid_Continents, columns=['Continents', 'TotalCa
 st.table(data_continents)
 
 #For taking geolocation(latitude, longitude) for each country
-Coordinates = pd.read_csv('Coordinates.csv') #Used data from kaggle(link above)
+Coordinates = pd.read_csv('Coordinates.csv')
 df = pd.DataFrame(Coordinates)
 
 Lat = list(df['latitude'])
@@ -76,7 +77,7 @@ for i in (Covid_Countries['Country']):
 Covid_Countries['latitude'] = latitude
 Covid_Countries['longitude'] = longitude
 
-#Checkboxe for user input features
+#Checkboxes for user input features
 default_Attributes = ['TotalCases', 'NewCases', 'TotalDeaths', 'NewDeaths', 'TotalRecovered', 'NewRecovered', 'ActiveCases']
 list_of_columns = list(Covid_Countries.columns)
 st.write("""## For filtering data""")
@@ -100,7 +101,7 @@ if st.checkbox('by Continents'):
     st.dataframe(Covid_Countries_filter0)
 
 if st.checkbox('by Countries'):
-    Selected_Countries = st.multiselect('Country', list(sorted(Covid_Countries['Country'])))
+    Selected_Countries = st.multiselect('Country', list(sorted(Covid_Countries['Country'])), 'Kazakhstan')
     Selected_Attributes_for_Countries = st.multiselect('Attribute', list_of_columns[1:], default_Attributes)
 
     Attributes_for_Countries = ['Country']
@@ -131,6 +132,26 @@ for i in Covid_Json_test['features']:
             info['Population'] = PP[k]
 Covid_Json = json.dumps(Covid_Json_test)
 
+#Scraping and filtering data for vaccination plot
+Vaccine = pd.read_csv('https://raw.githubusercontent.com/Oryngaliyev21/covid-19-data/master/public/data/vaccinations/vaccinations.csv')
+
+empty_df = {}
+world_vac_data = pd.DataFrame(empty_df)
+
+for i, item in enumerate(Vaccine.location.tolist()):
+    if item == 'World':
+        world_vac_data = world_vac_data.append(Vaccine.loc[[i]], ignore_index=True)
+
+date = world_vac_data.date.tolist()
+total_vaccinations = world_vac_data.total_vaccinations.tolist()
+people_vaccinated = world_vac_data.people_vaccinated.tolist()
+people_fully_vaccinated = world_vac_data.people_fully_vaccinated.tolist()
+
+np_date = np.array([np.datetime64(x) for x in date])
+np_v = np.array(total_vaccinations)
+np_pv = np.array(people_vaccinated)
+np_pfv = np.array(people_fully_vaccinated)
+
 #SELECTBOX widgets for maps
 metrics = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
 cols = st.selectbox('Covid metric to view', metrics)
@@ -149,26 +170,26 @@ lon = Covid_Countries['longitude']
 elevation = Covid_Countries[metric_to_show_in_covid_Layer]
 
 def color_change(elev):
-    if(elev < 1000):
-        return('green')
-    elif(1000 <= elev <10000):
-        return('orange')
+    if elev < 1000:
+        return 'green'
+    elif 1000 <= elev <10000:
+        return 'orange'
     else:
-        return('red')
+        return 'red'
 
-map_marker = folium.Map(location=[0,0], zoom_start = 2)
+map_marker = folium.Map(location=[0, 0], zoom_start=2)
 
 marker_cluster = MarkerCluster().add_to(map_marker)
 
 for lat, lon, elevation, Country in zip(lat, lon, elevation, Country):
-    folium.Marker(location=[lat, lon], popup=[Country,elevation], icon=folium.Icon(color = color_change(elevation))).add_to(map_marker)
+    folium.Marker(location=[lat, lon], popup=[Country, elevation], icon=folium.Icon(color=color_change(elevation))).add_to(map_marker)
 folium_static(map_marker)
 
 # Create the plot layer
 subheading = st.subheader("Covid-19 distribution Heatmap")
 
 #Create base map for Heatmap
-map_heat = folium.Map(location=[0,0], zoom_start = 2)
+map_heat = folium.Map(location=[0, 0], zoom_start=2)
 max_totalcases = max(list(Covid_Countries["TotalCases"]))
 min_totalcases = min(list(Covid_Countries["TotalCases"]))
 
@@ -191,7 +212,7 @@ heatmap = folium.Choropleth(
     name='Covid-19',
     columns=['Country', 'TotalCases'],
     key_on='properties.name',
-    bins=[min_totalcases, 10000, 50000, 100000, 300000, 500000, 1000000, 5000000, 15000000, max_totalcases+1],
+    bins=[min_totalcases, 10**4, 5*10**4, 10**5, 3*10**5, 5*10**5, 10**6, 5*10**6, 15*10**6, max_totalcases+1],
     fill_color='YlOrRd',
     fill_opacity=0.9, line_opacity=0.6,
     legend_name='Total Cases',
