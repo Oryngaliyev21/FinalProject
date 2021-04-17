@@ -4,6 +4,7 @@ import folium
 import pandas as pd
 import numpy as np
 import streamlit as st
+import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
 from datetime import *
 from streamlit_folium import folium_static
@@ -132,33 +133,9 @@ for i in Covid_Json_test['features']:
             info['Population'] = PP[k]
 Covid_Json = json.dumps(Covid_Json_test)
 
-#Scraping and filtering data for vaccination plot
-Vaccine = pd.read_csv('https://raw.githubusercontent.com/Oryngaliyev21/covid-19-data/master/public/data/vaccinations/vaccinations.csv')
-
-empty_df = {}
-world_vac_data = pd.DataFrame(empty_df)
-
-for i, item in enumerate(Vaccine.location.tolist()):
-    if item == 'World':
-        world_vac_data = world_vac_data.append(Vaccine.loc[[i]], ignore_index=True)
-
-date = world_vac_data.date.tolist()
-total_vaccinations = world_vac_data.total_vaccinations.tolist()
-people_vaccinated = world_vac_data.people_vaccinated.tolist()
-people_fully_vaccinated = world_vac_data.people_fully_vaccinated.tolist()
-
-np_date = np.array([np.datetime64(x) for x in date])
-np_v = np.array(total_vaccinations)
-np_pv = np.array(people_vaccinated)
-np_pfv = np.array(people_fully_vaccinated)
-
 #SELECTBOX widgets for maps
-metrics = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
-cols = st.selectbox('Covid metric to view', metrics)
-
-# let's ask the user which column should be used as Index
-if cols in metrics:
-    metric_to_show_in_covid_Layer = cols
+parameters = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
+select_p = st.selectbox('Covid metric to view', parameters)
 
 # Create the plot layer
 subheading = st.subheader("Covid-19 distribution Marker Map")
@@ -167,12 +144,12 @@ subheading = st.subheader("Covid-19 distribution Marker Map")
 Country = Covid_Countries['Country']
 lat = Covid_Countries['latitude']
 lon = Covid_Countries['longitude']
-elevation = Covid_Countries[metric_to_show_in_covid_Layer]
+elevation = Covid_Countries[select_p]
 
-def color_change(elev):
-    if elev < 1000:
+def color_change(el):
+    if el < 1000:
         return 'green'
-    elif 1000 <= elev <10000:
+    elif 1000 <= el < 10000:
         return 'orange'
     else:
         return 'red'
@@ -217,15 +194,49 @@ heatmap = folium.Choropleth(
     fill_opacity=0.9, line_opacity=0.6,
     legend_name='Total Cases',
     highlight=True).add_to(map_heat)
-folium.GeoJson(
-    Covid_Json,
-    style_function=lambda feature: {
-        'fillColor': '#ffff00',
-        'color': 'black',
-        'weight': 0.2,
-        'dashArray': '5, 5'
-    },
+folium.GeoJson(Covid_Json, style_function=lambda feature: {
+    'fillColor': '#ffff00',
+    'color': 'black',
+    'weight': 0.2,
+    'dashArray': '5, 5'},
     tooltip=tooltip,
     popup=popup).add_to(heatmap)
 
 folium_static(map_heat)
+
+#Scraping and filtering data for vaccination plot
+Vaccine = pd.read_csv('https://raw.githubusercontent.com/Oryngaliyev21/covid-19-data/master/public/data/vaccinations/vaccinations.csv')
+
+empty_df = {}
+world_vac_data = pd.DataFrame(empty_df)
+
+for i, item in enumerate(Vaccine.location.tolist()):
+    if item == 'World':
+        world_vac_data = world_vac_data.append(Vaccine.loc[[i]], ignore_index=True)
+
+date = world_vac_data.date.tolist()
+total_vaccinations = world_vac_data.total_vaccinations.tolist()
+people_vaccinated = world_vac_data.people_vaccinated.tolist()
+people_fully_vaccinated = world_vac_data.people_fully_vaccinated.tolist()
+
+np_date = np.array([np.datetime64(x) for x in date])
+np_v = np.array(total_vaccinations)
+np_pv = np.array(people_vaccinated)
+np_pfv = np.array(people_fully_vaccinated)
+
+#Simple_plot options
+fig = plt.figure()
+axes = fig.add_axes([1,1,1,1])
+axes.plot(np_date, np_v, 'r', label='total number of doses administered')
+axes.plot(np_date, np_pv, 'b', label='total number of people who received at least one vaccine dose')
+axes.plot(np_date, np_pfv, 'g', label='total number of people who received all doses')
+axes.set_yscale('log')
+axes.grid(color='purple', alpha=0.3, linestyle='dashed', linewidth=1)
+axes.set_xlabel('Date')
+axes.set_ylabel('Vaccination')
+axes.set_title('Vaccination statistic')
+axes.spines[:].set_color('red')
+plt.legend(loc=0)
+st.set_option('deprecation.showPyplotGlobalUse', False)
+
+st.pyplot()
