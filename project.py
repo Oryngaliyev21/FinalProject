@@ -1,6 +1,7 @@
 import requests
 import json
 import folium
+import base64
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -21,7 +22,7 @@ current_day = day.strftime("%B %d, %Y")
 st.title('COVID-19 pandemic tracker')
 st.write('Data sources:')
 st.write('Scrapping webpage:', 'https://www.worldometers.info/coronavirus/')
-st.write('For geolocations data check our GitHub repository:', 'Soon...')
+st.write('All data for geolocations we can find in our GitHub repository:', 'https://github.com/Oryngaliyev21/FinalProject')
 st.write('Date when information updated:', current_time, '-', current_day, '(GMT+6)')
 
 #Parser block
@@ -32,7 +33,7 @@ table = page.find_all('table', id="main_table_countries_today")[0]
 Covid_test = pd.read_html(str(table), displayed_only=False)[0]
 
 #Make a pure worksheet without any bugs
-Covid = Covid_test.drop(Covid_test.index[[6, 229, 230, 231, 232, 233, 234, 235, 236]])
+Covid = Covid_test.drop(Covid_test.index[[6, 229, 230, 231, 232, 233, 234, 235, 236, 237]])
 Covid['Continent'] = Covid['Continent'].replace([None], 'Cruise ship')
 Covid = Covid.drop('#', 1)
 Covid = Covid.rename(columns={'Country,Other': 'Country'})
@@ -81,8 +82,8 @@ Covid_Countries['longitude'] = longitude
 #Checkboxes for user input features
 default_Attributes = ['TotalCases', 'NewCases', 'TotalDeaths', 'NewDeaths', 'TotalRecovered', 'NewRecovered', 'ActiveCases']
 list_of_columns = list(Covid_Countries.columns)
-st.write("""## For filtering data""")
 
+st.write("""## For filtering and showing data""")
 if st.checkbox('by Continents'):
     For_Continent = []
     for i in list_of_columns:
@@ -113,6 +114,38 @@ if st.checkbox('by Countries'):
     Covid_Countries_filter_test1 = Covid_Countries[Attributes_for_Countries]
     Covid_Countries_filter1 = Covid_Countries_filter_test1[Covid_Countries_filter_test1.Country.isin(Selected_Countries)]
     st.dataframe(Covid_Countries_filter1)
+if st.checkbox('Distribution Marker Map'):
+    # SELECTBOX widgets for maps
+    parameters = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
+    select_p = st.selectbox('Covid metric to view', parameters)
+
+    # Create the plot layer
+    subheading = st.subheader("Covid-19 distribution Marker Map")
+
+    # Load Data for MAPS
+    Country = Covid_Countries['Country']
+    lat = Covid_Countries['latitude']
+    lon = Covid_Countries['longitude']
+    elevation = Covid_Countries[select_p]
+
+
+    def color_change(el):
+        if el < 1000:
+            return 'green'
+        elif 1000 <= el < 10000:
+            return 'orange'
+        else:
+            return 'red'
+
+
+    map_marker = folium.Map(location=[0, 0], zoom_start=2)
+
+    marker_cluster = MarkerCluster().add_to(map_marker)
+
+    for lat, lon, elevation, Country in zip(lat, lon, elevation, Country):
+        folium.Marker(location=[lat, lon], popup=[Country, elevation],
+                      icon=folium.Icon(color=color_change(elevation))).add_to(map_marker)
+    folium_static(map_marker)
 
 #Update json file for Advanced WorldMap with our Covid data(TotalCases, TotalDeaths and etc.)
 with open('World Map Geo JSON data.json') as f:
@@ -132,35 +165,6 @@ for i in Covid_Json_test['features']:
             info['ActiveCases'] = AC[k]
             info['Population'] = PP[k]
 Covid_Json = json.dumps(Covid_Json_test)
-
-#SELECTBOX widgets for maps
-parameters = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
-select_p = st.selectbox('Covid metric to view', parameters)
-
-# Create the plot layer
-subheading = st.subheader("Covid-19 distribution Marker Map")
-
-#Load Data for MAPS
-Country = Covid_Countries['Country']
-lat = Covid_Countries['latitude']
-lon = Covid_Countries['longitude']
-elevation = Covid_Countries[select_p]
-
-def color_change(el):
-    if el < 1000:
-        return 'green'
-    elif 1000 <= el < 10000:
-        return 'orange'
-    else:
-        return 'red'
-
-map_marker = folium.Map(location=[0, 0], zoom_start=2)
-
-marker_cluster = MarkerCluster().add_to(map_marker)
-
-for lat, lon, elevation, Country in zip(lat, lon, elevation, Country):
-    folium.Marker(location=[lat, lon], popup=[Country, elevation], icon=folium.Icon(color=color_change(elevation))).add_to(map_marker)
-folium_static(map_marker)
 
 # Create the plot layer
 subheading = st.subheader("Covid-19 distribution Heatmap")
@@ -205,7 +209,7 @@ folium.GeoJson(Covid_Json, style_function=lambda feature: {
 folium_static(map_heat)
 
 #Scraping and filtering data for vaccination plot
-Vaccine = pd.read_csv('https://raw.githubusercontent.com/Oryngaliyev21/covid-19-data/master/public/data/vaccinations/vaccinations.csv')
+Vaccine = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv')
 
 empty_df = {}
 world_vac_data = pd.DataFrame(empty_df)
@@ -219,6 +223,9 @@ total_vaccinations = world_vac_data.total_vaccinations.tolist()
 people_vaccinated = world_vac_data.people_vaccinated.tolist()
 people_fully_vaccinated = world_vac_data.people_fully_vaccinated.tolist()
 
+for_df_world = world_vac_data.tail(1).reset_index(drop=True)
+for_df_world = for_df_world.drop('iso_code', 1)
+
 np_date = np.array([np.datetime64(x) for x in date])
 np_v = np.array(total_vaccinations)
 np_pv = np.array(people_vaccinated)
@@ -226,7 +233,7 @@ np_pfv = np.array(people_fully_vaccinated)
 
 #Simple_plot options
 fig = plt.figure()
-axes = fig.add_axes([1,1,1,1])
+axes = fig.add_axes([1, 1, 1, 1])
 axes.plot(np_date, np_v, 'r', label='total number of doses administered')
 axes.plot(np_date, np_pv, 'b', label='total number of people who received at least one vaccine dose')
 axes.plot(np_date, np_pfv, 'g', label='total number of people who received all doses')
@@ -239,4 +246,37 @@ axes.spines[:].set_color('red')
 plt.legend(loc=0)
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
+st.write("""
+### Today vaccination against Covid-19 Pandemic has his own role and also an important in statistics.""")
+st.write(""" """)
 st.pyplot()
+st.dataframe(for_df_world)
+
+def filedownload(df):
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
+    href = f'<a href="data:file/csv;base64,{b64}" download="Covid-19 Data.csv">Download CSV File</a>'
+    return href
+
+st.write("""
+### Here you can download preferred dataset in csv format
+#### We hope that it will be helpful!""")
+dfs = ['World data table', 'Continent data table', 'Country data table', 'Vaccination data']
+Ch = st.selectbox('Download one of tables as csv', dfs)
+
+if Ch == 'World data table':
+    st.markdown(filedownload(data_continents), unsafe_allow_html=True)
+elif Ch == 'Continent data table':
+    st.markdown(filedownload(Covid_Countries_filter0), unsafe_allow_html=True)
+elif Ch == 'Country data table':
+    st.markdown(filedownload(Covid_Countries_filter1), unsafe_allow_html=True)
+else:
+    st.markdown(filedownload(for_df_world), unsafe_allow_html=True)
+
+st.write("""
+## Contact US
+#### Please don't hesitate to contact us if you have any questions:
+E-mail: 200101059@stu.sdu.edu.kz or 200101053@stu.sdu.edu.kz       
+Phone numbers(WhatsApp and Telegram 24/7): +7(707)358-04-06 +7(776)852-52-92
+""")
+
