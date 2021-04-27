@@ -6,23 +6,16 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
-from datetime import *
 from streamlit_folium import folium_static
 from folium.plugins import MarkerCluster
 from folium.features import GeoJson, GeoJsonTooltip, GeoJsonPopup
 
-#Block for current time and date
-time = datetime.now()
-day = date.today()
-current_time = time.strftime("%H:%M:%S")
-current_day = day.strftime("%B %d, %Y")
-
 #Application title and basic info
-st.title('COVID-19 pandemic tracker')
+pic1 = 'https://i1.wp.com/media.nbcboston.com/2020/11/NBC-COVID-Tracker.jpg?quality=85&resize=1200%2C675&strip=all&ssl=1'
+st.image(pic1, use_column_width=True)
 st.write('Data sources:')
 st.write('Scrapping webpage:', 'https://www.worldometers.info/coronavirus/')
 st.write('All data for geolocations we can find in our GitHub repository:', 'https://github.com/Oryngaliyev21/FinalProject')
-st.write('Date when information updated:', current_time, '-', current_day, '(GMT+6)')
 
 #Parser block
 url = 'https://www.worldometers.info/coronavirus/'
@@ -273,10 +266,11 @@ elif Ch == 'Continent data table':
 elif Ch == 'Country data table':
     st.markdown(filedownload(Covid_Countries_filter1), unsafe_allow_html=True)
 else:
-    st.markdown(filedownload(for_df_world), unsafe_allow_html=True)
+    st.markdown(filedownload(for_table_world_vac_data), unsafe_allow_html=True)
 
+pic2 = 'https://whataftercollege.com/wp-content/uploads/2017/08/1888948-contact-banner.jpg'
+st.image(pic2, use_column_width=True)
 st.write("""
-## Contact US
 #### Please don't hesitate to contact us if you have any questions:
 E-mail: 200101059@stu.sdu.edu.kz or 200101053@stu.sdu.edu.kz       
 Phone numbers(WhatsApp and Telegram 24/7): +7(707)358-04-06 +7(776)852-52-92
