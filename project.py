@@ -91,7 +91,6 @@ if st.checkbox('by Continents'):
     Covid_Countries_filter0 = Covid_Countries_filter_test0[Covid_Countries_filter_test0.Continent.isin(Selected_Continent)]
 
     st.dataframe(Covid_Countries_filter0)
-
 if st.checkbox('by Countries'):
     Selected_Countries = st.multiselect('Country', list(sorted(Covid_Countries['Country'])), 'Kazakhstan')
     Selected_Attributes_for_Countries = st.multiselect('Attribute', list_of_columns[1:], default_Attributes)
@@ -105,7 +104,7 @@ if st.checkbox('by Countries'):
     Covid_Countries_filter1 = Covid_Countries_filter_test1[Covid_Countries_filter_test1.Country.isin(Selected_Countries)]
     st.dataframe(Covid_Countries_filter1)
 if st.checkbox('Distribution Marker Map'):
-    # SELECTBOX widgets for maps
+    #SELECTBOX widgets for maps
     parameters = ['TotalCases', 'TotalDeaths', 'TotalRecovered', 'ActiveCases', 'TotalTests']
     select_p = st.selectbox('Covid metric to view', parameters)
 
@@ -227,18 +226,20 @@ world_vac_data = world_vac_data.rename(columns={
 for_table_world_vac_data = pd.DataFrame(world_vac_data.tail(1).reset_index(drop=True), columns=['location', 'date', 'Administrated doses', 'At least 1 dose', 'Fully vaccinated', 'Daily change'])
 
 #Simple_plot options
-fig = plt.figure()
+fig = plt.figure(figsize=(12, 9))
 axes = fig.add_axes([1, 1, 1, 1])
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=17)
 axes.plot(np_date, np_v, 'r', label='total number of doses administered')
 axes.plot(np_date, np_pv, 'b', label='total number of people who received at least one vaccine dose')
 axes.plot(np_date, np_pfv, 'g', label='total number of people who received all doses')
 axes.set_yscale('log')
 axes.grid(color='purple', alpha=0.3, linestyle='dashed', linewidth=1)
-axes.set_xlabel('Date')
-axes.set_ylabel('Vaccination')
-axes.set_title('Vaccination statistic')
+axes.set_xlabel('Date', fontsize=24)
+axes.set_ylabel('Vaccination', fontsize=24)
+axes.set_title('Vaccination statistic', fontsize=28)
 axes.spines[:].set_color('red')
-plt.legend(loc=0)
+plt.legend(loc=4, fontsize=16)
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
 st.write("""
@@ -247,9 +248,10 @@ st.write(""" """)
 st.pyplot()
 st.table(for_table_world_vac_data)
 
+#File Download Block
 def filedownload(df):
     csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
+    b64 = base64.b64encode(csv.encode()).decode()
     href = f'<a href="data:file/csv;base64,{b64}" download="Covid-19 Data.csv">Download CSV File</a>'
     return href
 
@@ -268,6 +270,7 @@ elif Ch == 'Country data table':
 else:
     st.markdown(filedownload(for_table_world_vac_data), unsafe_allow_html=True)
 
+#Info Block
 pic2 = 'https://whataftercollege.com/wp-content/uploads/2017/08/1888948-contact-banner.jpg'
 st.image(pic2, use_column_width=True)
 st.write("""
