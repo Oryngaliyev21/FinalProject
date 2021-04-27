@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
-from bs4 import BeautifulSoup
 from datetime import *
 from streamlit_folium import folium_static
 from folium.plugins import MarkerCluster
@@ -28,9 +27,7 @@ st.write('Date when information updated:', current_time, '-', current_day, '(GMT
 #Parser block
 url = 'https://www.worldometers.info/coronavirus/'
 req = requests.get(url)
-page = BeautifulSoup(req.content, 'html.parser')
-table = page.find_all('table', id="main_table_countries_today")[0]
-Covid_test = pd.read_html(str(table), displayed_only=False)[0]
+Covid_test = pd.read_html(req.text, displayed_only=False)[0]
 
 #Make a pure worksheet without any bugs
 Covid = Covid_test.drop(Covid_test.index[[6, 229, 230, 231, 232, 233, 234, 235, 236, 237]])
@@ -223,13 +220,18 @@ total_vaccinations = world_vac_data.total_vaccinations.tolist()
 people_vaccinated = world_vac_data.people_vaccinated.tolist()
 people_fully_vaccinated = world_vac_data.people_fully_vaccinated.tolist()
 
-for_df_world = world_vac_data.tail(1).reset_index(drop=True)
-for_df_world = for_df_world.drop('iso_code', 1)
-
 np_date = np.array([np.datetime64(x) for x in date])
 np_v = np.array(total_vaccinations)
 np_pv = np.array(people_vaccinated)
 np_pfv = np.array(people_fully_vaccinated)
+
+world_vac_data = world_vac_data.rename(columns={
+    'total_vaccinations': 'Administrated doses',
+    'people_vaccinated': 'At least 1 dose',
+    'people_fully_vaccinated': 'Fully vaccinated',
+    'daily_vaccinations_raw': 'Daily change'
+})
+for_table_world_vac_data = pd.DataFrame(world_vac_data.tail(1).reset_index(drop=True), columns=['location', 'date', 'Administrated doses', 'At least 1 dose', 'Fully vaccinated', 'Daily change'])
 
 #Simple_plot options
 fig = plt.figure()
@@ -250,7 +252,7 @@ st.write("""
 ### Today vaccination against Covid-19 Pandemic has his own role and also an important in statistics.""")
 st.write(""" """)
 st.pyplot()
-st.dataframe(for_df_world)
+st.table(for_table_world_vac_data)
 
 def filedownload(df):
     csv = df.to_csv(index=False)
@@ -279,4 +281,3 @@ st.write("""
 E-mail: 200101059@stu.sdu.edu.kz or 200101053@stu.sdu.edu.kz       
 Phone numbers(WhatsApp and Telegram 24/7): +7(707)358-04-06 +7(776)852-52-92
 """)
-
