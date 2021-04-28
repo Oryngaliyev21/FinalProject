@@ -14,9 +14,9 @@ from folium.features import GeoJson, GeoJsonTooltip, GeoJsonPopup
 #Application title and basic info
 pic1 = 'https://i1.wp.com/media.nbcboston.com/2020/11/NBC-COVID-Tracker.jpg?quality=85&resize=1200%2C675&strip=all&ssl=1'
 st.image(pic1, use_column_width=True)
-st.write('Data sources:')
-st.write('Scrapping webpage:', 'https://www.worldometers.info/coronavirus/')
-st.write('All data for geolocations we can find in our GitHub repository:', 'https://github.com/Oryngaliyev21/FinalProject')
+st.write("""## Data sources:""")
+st.write('Scrapped webpage:', 'https://www.worldometers.info/coronavirus/')
+st.write('All data and source code you can find in our GitHub repository:', 'https://github.com/Oryngaliyev21/FinalProject')
 
 #Parser block
 url = 'https://www.worldometers.info/coronavirus/'
@@ -118,7 +118,6 @@ if st.checkbox('Distribution Marker Map'):
     lon = Covid_Countries['longitude']
     elevation = Covid_Countries[select_p]
 
-
     def color_change(el):
         if el < 1000:
             return 'green'
@@ -126,7 +125,6 @@ if st.checkbox('Distribution Marker Map'):
             return 'orange'
         else:
             return 'red'
-
 
     map_marker = folium.Map(location=[0, 0], zoom_start=2)
 
@@ -222,8 +220,7 @@ world_vac_data = world_vac_data.rename(columns={
     'total_vaccinations': 'Administrated doses',
     'people_vaccinated': 'At least 1 dose',
     'people_fully_vaccinated': 'Fully vaccinated',
-    'daily_vaccinations_raw': 'Daily change'
-})
+    'daily_vaccinations_raw': 'Daily change'})
 for_table_world_vac_data = pd.DataFrame(world_vac_data.tail(1).reset_index(drop=True), columns=['location', 'date', 'Administrated doses', 'At least 1 dose', 'Fully vaccinated', 'Daily change'])
 
 #Simple_plot options
