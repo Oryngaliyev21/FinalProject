@@ -206,15 +206,10 @@ for i, item in enumerate(Vaccine.location.tolist()):
     if item == 'World':
         world_vac_data = world_vac_data.append(Vaccine.loc[[i]], ignore_index=True)
 
-date = world_vac_data.date.tolist()
-total_vaccinations = world_vac_data.total_vaccinations.tolist()
-people_vaccinated = world_vac_data.people_vaccinated.tolist()
-people_fully_vaccinated = world_vac_data.people_fully_vaccinated.tolist()
-
-np_date = np.array([np.datetime64(x) for x in date])
-np_v = np.array(total_vaccinations)
-np_pv = np.array(people_vaccinated)
-np_pfv = np.array(people_fully_vaccinated)
+np_date = np.array([np.datetime64(x) for x in world_vac_data.date.tolist()])
+np_v = np.array(world_vac_data.total_vaccinations.tolist())
+np_pv = np.array(world_vac_data.people_vaccinated.tolist())
+np_pfv = np.array(world_vac_data.people_fully_vaccinated.tolist())
 
 world_vac_data = world_vac_data.rename(columns={
     'total_vaccinations': 'Administrated doses',
